@@ -46,8 +46,8 @@ CheckStrError = "" '念のため
 UsrInputStr = ""
 Do Until CheckStrError = "No Error"
   '使用者へ入力要求
-  UsrInputStr = CStr(InputBox("No.xxxx SYSLOGサーバ（xxx.xxx.xxx.xxx）の" & vbCr & _ 
-  "「/var/logs/Syslog/Syslog.log」より入力された日時の10分前～5分後までの間に書き込まれた" & vbCr & "メッセージを取得します。" & vbCr & _
+ UsrInputStr = CStr(InputBox("serverinfoの" & vbCr & _ 
+ "「path」より入力された日時の10分前～5分後までの間に書き込まれた" & vbCr & "メッセージを取得します。" & vbCr & _
   "なお、入力する日時は<< YYYY/MM/DD hh:mm:ss >>の形式でお願いします。" & vbCr & _
   "※なにも入力せずに「OK」を押すと終了できます。" , "データを取得する日時を入力してください。", UsrInputStr))
   CheckStrError = ""
