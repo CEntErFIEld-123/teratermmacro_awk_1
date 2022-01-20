@@ -1,4 +1,0 @@
-memo
-=RANDBETWEEN(TIME(18, 30, 0)*100000, TIME(19, 0, 0)*100000) / 100000
-="2022/01/01 " & TEXT(A2,"hh:mm:ss")
-="cccccccccccc"&B2&"ccccccccccccc"&SUBSTITUTE(SUBSTITUTE(B2," ","T"),"/","-")&" aaaaaaaaaaaaaaaaaaaaaaaaaaaa"&ROW()-1
