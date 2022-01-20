@@ -1,1 +1,169 @@
+'VBS1
+'=!!修正する際は必ずお読みください。!!
+'================================================
+'日本語を使用しているためは文字コードを「ANSI」にして保存してください。
+'使用するファイル・フォルダ名を変更する際は以下の★の項目を修正してください。
+'サーバのIPアドレスの修正はttlファイル側を修正してください。
+'更新日時：2022/02/01 更新者：
+'================================================
 
+'(1)事前設定
+Option Explicit '変数を明示的に宣言
+
+'(2)使用する変数の宣言
+Dim CdPath 'カレントディレクトリのパス
+Dim ScrPath '使用するファイルを格納したパス
+Dim ResPath '集計結果を格納するパス
+Dim LogsSavePath '操作ログを格納するパス
+Dim ttpmacroPath 'テラタームマクロのパス
+Dim UseFilesName '使用するTTLファイル、VBSファイル名
+Dim LogFilesName 'テラタームマクロがログを記録ファイル名群
+Dim UsrInputStr '使用者が入力した値
+Dim ReUsrInputStr '使用者が入力した値をリネームした値
+Dim SyslogStartDate, SyslogEndDate ,StartDate'TTLファイルへ引き渡す日時の値
+Dim Fso 'ファイルシステムオブジェクト用に使用
+Dim Shello 'TTLファイルを起動するためのオブジェクト用に使用
+Dim CheckStrError, CheckStrNum '入力された値のチェックで使用
+Dim CheckMsg 'メッセージの戻り確認に使用
+Dim i, j 'カウンターなどに使用
+
+'(3)使用するttlとvbsファイルが存在しているか確認する。
+StartDate = Replace(Now(), " ","　") '作業開始日時
+Set Fso = CreateObject("Scripting.FileSystemObject")
+CdPath = Fso.GetAbsolutePathName(".") 'カレントディレクトリのパスを取得
+'★========================================================================
+ScrPath = CdPath & "\script\" 'ツール群のパス
+ResPath = CdPath & "\結果\" '結果を書き込むファイルのパス
+LogsSavePath = CdPath & "\ログ\" '操作ログを書き込むファイルのパス
+UseFilesName = Array("GetFileInfo.ttl", "CountIPAddressOutput.vbs") '使用するファイル名群
+LogFilesName = Array("操作ログ1.txt", "操作ログ2.txt") 'マクロがログを記録ファイル名群
+ttpmacroPath = "C:\Program Files (x86)\teraterm\ttpmacro.exe"
+'==========================================================================
+ 'ファイルの存在チェック
+For Each i In UseFilesName
+  If Fso.FileExists(ScrPath & i) = False Then
+    MsgBox "「script」フォルダに使用する「" & i & "」が存在しません。該当フォルダを確認してください。", vbCritical,"使用するファイルがありません"
+    Set Fso = Nothing
+    WScript.Quit
+  End if
+Next
+For Each i In LogFilesName
+  If Fso.FileExists(ResPath & i) = True Or Fso.FileExists(LogsSavePath & i) = True Then
+    MsgBox "「結果」か「操作ログ」フォルダにマクロが書き込む「" & i & "」が存在します。" & vbCr & _
+           "退避漏れの可能性があります。ファイルを削除するか退避をしてください。", vbCritical,"マクロがログを書き込むファイルが残っています"
+    Set Fso = Nothing
+    WScript.Quit
+  End If
+next
+Set Fso = Nothing
+
+'(4)日付の入力処理
+CheckStrError = "" '念のため
+UsrInputStr = "YYYY/MM/DD hh:mm:ss" '初期値
+Do Until CheckStrError = "NoError" '入力された値にエラーがなくなるまでループ
+  '使用者へ入力要求
+  UsrInputStr = CStr(InputBox("サーバから入力された日時の10分前～5分後までの間にSyslog.logに書き込まれた内容を取得します。" & vbCr & _
+   "なお、入力形式は「YYYY/MM/DD hh:mm:ss」です。" & vbCr & _
+   "例）2022年1月2日3時4分5秒は、"& vbCr & "  「2022/01/02 03:04:05」となります。" & vbCr & _
+   "※何も入力せず「OK」か「キャンセル」を押すと終了できます。" , "データを取得する日時を入力してください。", UsrInputStr))
+  If UsrInputStr = "" Then
+    msgbox "ツールを終了します。"
+    WScript.Quit
+  End if
+  '(5)入力された値が正しいか確認する。
+   'チェック開始
+  CheckStrError = ""
+  Do While True
+    '①文字数の確認
+    If Len(UsrInputStr) > 19 Then
+      MsgBox "入力された日付の文字数が多いです。もう一度入力してください。", vbCritical,"入力エラー"
+      Exit Do
+    ElseIf  Len(UsrInputStr) < 19 Then
+      MsgBox "入力された日付の文字数が少ないです。もう一度入力してください。", vbCritical,"入力エラー"
+      Exit Do
+    End if
+    '②「/」の確認
+    j = 0
+    For i = 1 To 2
+      j = InStr(j + 1, UsrInputStr, "/")
+    Next
+    If j <> 8 Then
+      MsgBox "入力された日付の年月日の「/」が正しく入力されていません。半角でもう一度入力してください。", vbCritical,"入力エラー"
+      Exit Do
+    End if
+    '③スペースの確認
+    j = InStr(UsrInputStr, " ")
+    If j <> 11 Then
+      MsgBox "入力された日付の年月日と時間の間にスペースが正しく入力されていません。", vbCritical,"入力エラー"
+      Exit Do
+    End if
+    '④「:」の確認
+    j = 0
+    For i = 1 To 2
+      j = InStr(j + 1, UsrInputStr, ":")
+    Next
+    If j <> 17 Then
+      MsgBox "入力された日付の時間の「:」が正しく入力されていません。半角でもう一度入力してください。", vbCritical,"入力エラー"
+      Exit Do
+    End if
+    '⑤数値の判定
+    CheckStrNum = Replace(Replace(Replace(UsrInputStr, "/", ""), " ", ""), ":", "")
+    If IsNumeric(CheckStrNum) = False Or Len(CheckStrNum) <> 14 Then '数字以外が含まれているか数字が足りない場合エラー
+      MsgBox "入力された日付に数字以外が含まれています。もう一度入力してください。", vbCritical,"入力エラー"
+      Exit Do
+    End if
+    '⑥日付の整合性の確認
+    If IsDate(UsrInputStr) = true Then
+      If Left(UsrInputStr, 2) = 20 Then
+        CheckStrError = "NoError" 'エラーなし
+        Exit Do
+      Else
+        MsgBox "入力された日付が西暦20xx年ではありません。もう一度入力してください。", vbCritical,"入力エラー"
+        Exit Do
+      End if
+    Else
+      MsgBox "入力された日付に誤りがあります。もう一度入力してください。", vbCritical,"入力エラー"
+      Exit Do
+    End if
+  Loop
+   '念のため年月が本日と違っていた場合の確認
+  If CheckStrError = "NoError" Then
+    If FormatDateTime(Now, vbShortDate) <> FormatDateTime(UsrInputStr, vbShortDate) Then
+      CheckMsg = MsgBox("入力された年月日(" & FormatDateTime(UsrInputStr, vbShortDate) & ")と" & vbCr & _
+       "本日の年月日(" & FormatDateTime(Now, vbShortDate) & ")に乖離があります。" & vbCr & _
+       "本日の年月日と乖離がある状態で実行しますか？", vbyesno + vbExclamation,"年月日に乖離があります")
+      If CheckMsg = vbNo then
+        CheckStrError = "" '初期化しないとループが終わる
+        msgbox "再度入力をお願いします。",vbInformation
+      End If
+    End if
+  End if
+Loop
+
+'(6)入力された値から10分前を計算してログ収集開始日時のリネームする。
+ 'FormatDateTimeを使用する理由は、DateAddだとHHに0が入らないからです
+ReUsrInputStr = FormatDateTime(DateAdd("n", -10, UsrInputStr), 2) & Mid(UsrInputStr, 11, 1) & FormatDateTime(DateAdd("n", -10, UsrInputStr), 4) & Right(UsrInputStr, 3)
+SyslogStartDate = Replace(Replace(ReUsrInputStr, "/", "-"), " ", "T")
+ '念のため
+If Len(SyslogStartDate) <> 19 Then SyslogStartDate = Left(UsrInputStr, 2) & SyslogStartDate
+
+'(7)入力された値から5分後の計算をしてログ収集終了日時をリネームする。
+ReUsrInputStr = FormatDateTime(DateAdd("n", 5, UsrInputStr), 2) & Mid(UsrInputStr, 11, 1) & FormatDateTime(DateAdd("n", 5, UsrInputStr), 4) & Right(UsrInputStr, 3)
+SyslogEndDate = Replace(Replace(ReUsrInputStr, "/", "-"), " ", "T")
+ '念のため
+If Len(SyslogEndDate) <> 19 Then SyslogEndDate = Left(UsrInputStr, 2) & SyslogEndDate
+
+'(8)テラタームマクロへ引数を渡して起動する。
+CheckMsg = ""
+CheckMsg = MsgBox("本当に取得を開始しますか？", vbyesno + vbExclamation,"最終確認です")
+If CheckMsg = vbNo then
+    msgbox "再度ツールを起動してください。",vbInformation
+    WScript.Quit
+End If
+'msgbox SyslogStartDate & " " & SyslogEndDate
+Set Shello = CreateObject("WScript.Shell")
+Shello.Run """" & ttpmacroPath &""" "& ScrPath & UseFilesName(0) & " "& SyslogStartDate &" "& SyslogEndDate &" "& _
+  LogsSavePath &" "& LogFilesName(0) &" "& LogFilesName(1) &" "& ScrPath & UseFilesName(1) & " " & ResPath & " " & StartDate
+Set Shello = Nothing
+
+'VBSでの処理は終了
