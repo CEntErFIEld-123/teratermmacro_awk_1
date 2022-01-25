@@ -1,4 +1,3 @@
-'VBS1
 '=!!修正する際は必ずお読みください。!!
 '================================================
 '日本語を使用しているためは文字コードを「ANSI」にして保存してください。
@@ -167,13 +166,14 @@ Shello.Run """" & ttpmacroPath &""" "& ScrPath & UseFilesName(0) & " "& SyslogSt
 Set Shello = Nothing
 
 'VBSでの処理は終了
-;GetFileInfo.ttl
+
+
 ;推奨バージョン:4.62以上
 
 ;(1)batファイルから受け取ったシステム変数の確認。
  ;ttlファイル単体で実行された場合、エラーを表示し終了。
 if paramcnt = 1 then
-  messagebox 'このファイル単体で実行せず、vbsから起動してください。' '実行エラー' 
+  messagebox 'ファイル単体で実行せず、集計起動VBS.vbsから起動してください。' '実行エラー' 
   end 
 endif
 
@@ -401,12 +401,14 @@ end
   str2int CheckResult inputstr
  next
 return
-;CountIPAddressOutput.vbs
+
+
+
 Option Explicit
 '(1)受け取ったシステム変数の確認。
 If Wscript.Arguments.Count = 0 then
-'  MsgBox "このファイル単体で実行せず、Syslog集計起動VBS.vbsから起動してください。", vbCritical,"実行エラー"
-'  WScript.Quit
+  MsgBox "ファイル単体で実行せず、集計起動VBS.vbsから起動してください。", vbCritical,"実行エラー"
+  WScript.Quit
 End if
 
 '(2)使用する変数の設定
@@ -420,8 +422,9 @@ Dim SyslogStartEndDate 'サーバから取得した日時範囲
 Dim UserStartDate '作業を開始した日時
 Dim UserName '作業を行ったユーザ名
 Dim SearchStr '集計作業に用いる変数
+Dim IPaddress
 Dim TimeStr 'ファイル名変更に用いる変数
-Dim i, j, k, count, Check 'カウント用変数
+Dim i, j, k, count, Check ,CheckOutput 'カウント用変数
 Dim tmp, tmp2 '並び替えに用いる変数
 Dim TextArr() 'テキストの内容を格納する配列
 Dim ResultArr() '集計結果を格納する配列
@@ -451,12 +454,12 @@ oLog.Close()
 For i = 1 To 2
   If Fso.FileExists(LogsSavePath & "操作ログ" & i & ".txt") = False Then
     MsgBox "「ログ」フォルダに「操作ログ" & i & ".txt」が存在しません。" & vbCr & _
-           "Syslogサーバから正常に操作ログを取得できなかった可能性があります。"  & vbCr & _
+           "サーバから正常に操作ログを取得できなかった可能性があります。"  & vbCr & _
            "詳細は「結果」のフォルダ内の" & TotalResultFileName & "を確認してください。", vbCritical,"使用するファイルがありません"
     Set oLog = Fso.OpenTextFile(ResPath & TotalResultFileName, 8, True)
     oLog.WriteLine("IPアドレスの集計ができませんでした。" & vbCr & _
-                   "「ログ」フォルダに「" & LogFileName & "」が存在しないため実行できませんでした。"  & vbCr & _
-                   "Syslogサーバから正常に取得できなかった可能性があります。" & vbCr & _
+                   "「ログ」フォルダに「操作ログ" & i & ".txt」が存在しないため実行できませんでした。"  & vbCr & _
+                   "サーバから正常に取得できなかった可能性があります。" & vbCr & _
                    "手順書を参照しWinRMから情報を取得してください。")
     '事後処理
     oLog.WriteLine("⑤作業終了時刻：" & Now())
@@ -481,31 +484,25 @@ Loop
 oRsu.Close
 
 '(6)文字列の集計処理
+CheckOutput = 0
 'ファイル内に何も記載されていなかった場合
 If i = 0 Then
-  MsgBox "集計対象がありません。Syslogサーバから正常に操作ログを取得できなかった可能性があります。" & vbCr & _
+  MsgBox "集計対象がありません。サーバから正常に操作ログを取得できなかった可能性があります。" & vbCr & _
         "詳細は「結果」のディレクトリ内の" & TotalResultFileName & "を確認してください。",vbExclamation,"IPアドレスの集計ができませんでした"
   Set oLog = Fso.OpenTextFile(ResPath & TotalResultFileName, 8, True)
   oLog.WriteLine("IPアドレスの集計ができませんでした。" & vbCr & _
-                 "集計対象ファイルに何も記載がありません。Syslogサーバから正常に取得できなかった可能性があります。" & vbCr & _
+                 "集計対象ファイルに何も記載がありません。サーバから正常に取得できなかった可能性があります。" & vbCr & _
                  "手順書を参照しWinRMから情報を取得してください。また、操作ログは以下に格納されています。" & vbCr & _
                  "操作ログ1：" & LogsSavePath & TimeStr & "_" & LogFileName1 & vbCr & "操作ログ2：" & LogsSavePath & TimeStr & "_" & LogFileName2)
-  '事後処理
-  oLog.WriteLine("⑤作業終了時刻：" & Now())
-  oLog.Close
-  Set MvFso = Fso.GetFile(LogsSavePath & LogFileName1)
-  MvFso.Name = TimeStr & "_" & LogFileName1
-  Set MvFso = Fso.GetFile(LogsSavePath & LogFileName2)
-  MvFso.Name = TimeStr & "_" & LogFileName2
-  Set Fso = Nothing
-  'ツール終了
-  Msgbox "全ての処理が完了しました。"
-  WScript.Quit
-end if
-'正常にログが取得ができた場合の処理
+  CheckOutput = 1
+Else
+'ファイル内に何かしら文字が記載されていた場合
+'★
 SearchStr = "ccccc"
-for i = 0 to Ubound(TextArr)
-  If i > 0 And i < 3 Then
+'ファイルの集計対象行分だけループ
+'一行目はコマンドのため飛ばす
+for i = 1 to Ubound(TextArr)
+  If i < 3 Then
     If InStr(left(TextArr(i), 5), SearchStr) = 1 then
       ReDim ResultArr(1, 0)
       '★
@@ -517,12 +514,13 @@ for i = 0 to Ubound(TextArr)
         If InStr(left(TextArr(j), 5), SearchStr) = 1 then
           '特定の文字の場合の処理
           'ループ②条件：配列の数だけ
+          IPaddress = Mid(TextArr(j), 53, 1)
           Check = 0
           For k = 0 to UBound(ResultArr, 2)
             '条件分岐③条件：配列内(1番目)に存在する文字かどうか確認
-            If Mid(TextArr(j), 53, 1) = ResultArr(0, k) Then
+            If IPaddress = ResultArr(0, k) Then
               ResultArr(1, k) = ResultArr(1, k) + 1
-              Check = Check + 1
+              Check = 1
               Exit For
             End if
           Next
@@ -530,7 +528,7 @@ for i = 0 to Ubound(TextArr)
           If Check = 0 Then
             ReDim Preserve ResultArr(1 ,UBound(ResultArr, 2) + 1)
             '★
-            ResultArr(0, UBound(ResultArr, 2)) = Mid(TextArr(j), 53, 1)
+            ResultArr(0, UBound(ResultArr, 2)) = IPaddress
             ResultArr(1, UBound(ResultArr, 2)) = 1
           End if
         End if
@@ -553,6 +551,7 @@ for i = 0 to Ubound(TextArr)
       For j = 0 to UBound(ResultArr, 2)
         oLog.WriteLine("  対象文字列：" & ResultArr(0, j) & "	発生回数：" & ResultArr(1, j))
       Next
+      CheckOutput = 1
       MsgBox "正常に集計が実施できました！！"
       Exit for
     End if
@@ -560,12 +559,13 @@ for i = 0 to Ubound(TextArr)
     Exit for
   End if
 Next
-if i = 2 Or i = 3 then
-  MsgBox "集計対象がありません。Syslogサーバから正常に取得できなかった可能性があります。" & vbCr & _
+end if
+if CheckOutput = 0 then
+  MsgBox "集計対象がありません。サーバから正常に取得できなかった可能性があります。" & vbCr & _
          "詳細は結果のディレクトリ内の" & TotalResultFileName & "を確認してください。",vbExclamation,"IPアドレスの集計ができませんでした"
   Set oLog = Fso.OpenTextFile(ResPath & TotalResultFileName, 8, True)
   oLog.WriteLine("IPアドレスの集計ができませんでした。" & vbCr & _
-                 "コマンドは記載されていますが集計対象がありません。Syslogサーバから正常に取得できなかった可能性があります。" & vbCr & _
+                 "コマンドは記載されていますが集計対象がありません。サーバから正常に取得できなかった可能性があります。" & vbCr & _
                  "手順書を参照しWinRMから情報を取得してください。また、操作ログは以下に格納されています。" & vbCr & _
                  "操作ログ1：" & LogsSavePath & TimeStr & "_" & LogFileName1 & vbCr & "操作ログ2：" & LogsSavePath & TimeStr & "_" & LogFileName2)
 End if
