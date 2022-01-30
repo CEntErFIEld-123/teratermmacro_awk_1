@@ -192,9 +192,9 @@ CountVBSFileName = params[7]  ;起動する集計VBS
 UserStartDate = params[8]  ;集計VBSツールを起動した日時
 ResPath = params[9] ;結果を保存するパス
  ;パラメータ以外を変数へ設定
-SyslogServerIp = '10.0.128.1'  ;サーバのIP
-SyslogFilePath = '/var/log/'  ;サーバ上のログファイルのパス
-SyslogFileName = 'logtest.log'  ;サーバ上のログファイル名
+SyslogServerIp = ''  ;サーバのIP
+SyslogFilePath = ''  ;サーバ上のログファイルのパス
+SyslogFileName = ''  ;サーバ上のログファイル名
 ArchiveSyslogFileName = SyslogFileName  ;サーバ上のアーカイブされたログファイル名
 CheckLoop = 1 ;サーバ上のログ収集のループカウント
 ComparCheck = 0
