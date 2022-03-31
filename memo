@@ -1,1 +1,2 @@
 find test*.log | xargs grep a | sed -r "s/^.*<a>(.*)<\/a>.*<\!\[c\[(.*)/\1 \2/"
+find test*.log | xargs sed -r "s/^.*<a>(.*)<\/a>.*<\!\[c\[(.*)/\1 \2/" | awk '{print $3}'
